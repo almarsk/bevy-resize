@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-use bevy::sprite::Mesh2dHandle;
 use bevy::window::PrimaryWindow;
 
 pub const PLAYER_SPEED: f32 = 500.0;
@@ -13,11 +12,10 @@ fn main() {
             Startup,
             (spawn_camera, spawn_player, spawn_coordinate_display),
         )
-        .add_systems(Update, player_size)
+        .add_systems(Update, (player_size, confine_player_size).chain())
         .add_systems(Update, player_input)
-        .add_systems(Update, player_movement)
-        .add_systems(Update, confine_player_movement)
-        .add_systems(Update, confine_player_size)
+        .add_systems(Update, player_rotation)
+        .add_systems(Update, (player_movement, confine_player_movement).chain())
         .add_systems(Update, update_coordinate_display)
         .run();
 }
@@ -25,6 +23,7 @@ fn main() {
 #[derive(Component)]
 pub struct Player {
     speed: Vec3,
+    rotation_speed: f32,
 }
 
 pub fn spawn_player(
@@ -34,11 +33,17 @@ pub fn spawn_player(
     mut colors: ResMut<Assets<ColorMaterial>>,
 ) {
     let window = window_query.get_single().unwrap();
+
+    let sides = 6;
+
+    let circle = RegularPolygon::new(PLAYER_SIZE / 2., sides);
+    let mesh = Mesh::from(circle);
+
+    info_once!("{:?}", mesh);
+
     commands.spawn((
         ColorMesh2dBundle {
-            mesh: Mesh2dHandle(meshes.add(Circle {
-                radius: PLAYER_SIZE / 2.0,
-            })),
+            mesh: meshes.add(mesh).into(),
             transform: Transform {
                 translation: Vec3 {
                     x: window.width() / 2.0,
@@ -48,13 +53,14 @@ pub fn spawn_player(
                 ..Default::default()
             },
             material: colors.add(ColorMaterial {
-                color: Color::linear_rgb(120.0, 56.0, 0.0),
+                color: Color::linear_rgba(120.0, 56.0, 0.0, 0.8),
                 texture: None,
             }),
             ..Default::default()
         },
         Player {
             speed: Vec3::new(0., 0., 0.),
+            rotation_speed: 0.,
         },
     ));
 }
@@ -73,13 +79,29 @@ pub fn player_size(
     mut player_query: Query<&mut Transform, With<Player>>,
 ) {
     if let Ok(mut transform) = player_query.get_single_mut() {
-        if keyboard_input.pressed(KeyCode::KeyJ) {
+        if keyboard_input.pressed(KeyCode::KeyW) {
             transform.scale.x *= SCALE_FACTOR;
             transform.scale.y *= SCALE_FACTOR;
         }
-        if keyboard_input.pressed(KeyCode::KeyK) {
+        if keyboard_input.pressed(KeyCode::KeyS) {
             transform.scale.x /= SCALE_FACTOR;
             transform.scale.y /= SCALE_FACTOR;
+        }
+    }
+}
+
+pub fn confine_player_size(mut player_query: Query<&mut Transform, With<Player>>) {
+    if let Ok(mut player_transform) = player_query.get_single_mut() {
+        let max_dim = 2.;
+
+        if player_transform.scale.y > max_dim {
+            player_transform.scale.y = max_dim;
+            player_transform.scale.x = max_dim;
+        }
+
+        if player_transform.scale.y < 0.5 {
+            player_transform.scale.y = 0.5;
+            player_transform.scale.x = 0.5;
         }
     }
 }
@@ -106,30 +128,26 @@ pub fn player_input(
 
 pub fn player_movement(mut player_query: Query<(&mut Transform, &mut Player)>, time: Res<Time>) {
     if let Ok((mut transform, mut player)) = player_query.get_single_mut() {
-        let delta = player.speed * PLAYER_SPEED * time.delta_seconds();
-
+        let delta = player.speed * PLAYER_SPEED * time.delta_seconds() / transform.scale.y;
         transform.translation += delta;
         player.speed *= Vec3::splat(0.97);
+
+        let rotation_delta = player.rotation_speed * time.delta_seconds() / transform.scale.y;
+        transform.rotate_z(rotation_delta);
+        player.rotation_speed *= 0.97;
     }
 }
 
-pub fn confine_player_size(
-    mut player_query: Query<&mut Transform, With<Player>>,
-    window_query: Query<&Window, With<PrimaryWindow>>,
+pub fn player_rotation(
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    mut player_query: Query<&mut Player>,
 ) {
-    if let Ok(mut player_transform) = player_query.get_single_mut() {
-        let window = window_query.get_single().unwrap();
-
-        let lesser_dim = window.height().min(window.width()) * 0.8 / PLAYER_SIZE;
-
-        if player_transform.scale.y > lesser_dim {
-            player_transform.scale.y = lesser_dim;
-            player_transform.scale.x = lesser_dim;
+    if let Ok(mut player) = player_query.get_single_mut() {
+        if keyboard_input.pressed(KeyCode::KeyA) {
+            player.rotation_speed += 0.1;
         }
-
-        if player_transform.scale.y < 0.5 {
-            player_transform.scale.y = 0.5;
-            player_transform.scale.x = 0.5;
+        if keyboard_input.pressed(KeyCode::KeyD) {
+            player.rotation_speed -= 0.1;
         }
     }
 }
