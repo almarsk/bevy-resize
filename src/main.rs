@@ -4,6 +4,7 @@ use bevy::window::PrimaryWindow;
 
 pub const PLAYER_SPEED: f32 = 500.0;
 pub const PLAYER_SIZE: f32 = 100.0;
+pub const SCALE_FACTOR: f32 = 1.1;
 
 fn main() {
     App::new()
@@ -16,15 +17,14 @@ fn main() {
         .add_systems(Update, player_input)
         .add_systems(Update, player_movement)
         .add_systems(Update, confine_player_movement)
+        .add_systems(Update, confine_player_size)
         .add_systems(Update, update_coordinate_display)
         .run();
 }
 
 #[derive(Component)]
 pub struct Player {
-    factor: f32,
-    direction: Vec3,
-    scale_factor: f32,
+    speed: Vec3,
 }
 
 pub fn spawn_player(
@@ -54,13 +54,7 @@ pub fn spawn_player(
             ..Default::default()
         },
         Player {
-            factor: 0.0,
-            direction: Vec3 {
-                x: 0.0,
-                y: 0.0,
-                z: 0.0,
-            },
-            scale_factor: 1.0,
+            speed: Vec3::new(0., 0., 0.),
         },
     ));
 }
@@ -76,18 +70,16 @@ pub fn spawn_camera(mut commands: Commands, window_query: Query<&Window, With<Pr
 
 pub fn player_size(
     keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut player_query: Query<(&mut Transform, &mut Player)>,
+    mut player_query: Query<&mut Transform, With<Player>>,
 ) {
-    if let Ok((mut transform, mut player)) = player_query.get_single_mut() {
+    if let Ok(mut transform) = player_query.get_single_mut() {
         if keyboard_input.pressed(KeyCode::KeyJ) {
-            player.scale_factor += 0.01;
-            transform.scale.x *= player.scale_factor;
-            transform.scale.y *= player.scale_factor;
+            transform.scale.x *= SCALE_FACTOR;
+            transform.scale.y *= SCALE_FACTOR;
         }
         if keyboard_input.pressed(KeyCode::KeyK) {
-            player.scale_factor -= 0.01;
-            transform.scale.x /= player.scale_factor;
-            transform.scale.y /= player.scale_factor;
+            transform.scale.x /= SCALE_FACTOR;
+            transform.scale.y /= SCALE_FACTOR;
         }
     }
 }
@@ -97,62 +89,59 @@ pub fn player_input(
     mut player_query: Query<&mut Player>,
 ) {
     if let Ok(mut player) = player_query.get_single_mut() {
-        let mut direction = Vec3::ZERO;
-
         if keyboard_input.pressed(KeyCode::ArrowLeft) {
-            player.direction.x = 0.0;
-            direction += Vec3::new(-1.0, 0.0, 0.0);
-            player.factor = 1.0;
+            player.speed += Vec3::new(-0.1, 0., 0.);
         }
         if keyboard_input.pressed(KeyCode::ArrowRight) {
-            player.direction.x = 0.0;
-            direction += Vec3::new(1.0, 0.0, 0.0);
-            player.factor = 1.0;
+            player.speed += Vec3::new(0.1, 0.0, 0.);
         }
         if keyboard_input.pressed(KeyCode::ArrowUp) {
-            player.direction.y = 0.0;
-            direction += Vec3::new(0.0, 1.0, 0.0);
-            player.factor = 1.0;
+            player.speed += Vec3::new(0., 0.1, 0.);
         }
         if keyboard_input.pressed(KeyCode::ArrowDown) {
-            player.direction.y = 0.0;
-            direction += Vec3::new(0.0, -1.0, 0.0);
-            player.factor = 1.0;
-        }
-
-        if direction.length() > 0.0 {
-            player.direction = direction.normalize();
+            player.speed += Vec3::new(0., -0.1, 0.);
         }
     }
 }
 
 pub fn player_movement(mut player_query: Query<(&mut Transform, &mut Player)>, time: Res<Time>) {
     if let Ok((mut transform, mut player)) = player_query.get_single_mut() {
-        let delta = player.direction * PLAYER_SPEED * player.factor * time.delta_seconds();
+        let delta = player.speed * PLAYER_SPEED * time.delta_seconds();
 
         transform.translation += delta;
+        player.speed *= Vec3::splat(0.97);
+    }
+}
 
-        if player.factor <= 0.0001 {
-            player.direction = Vec3 {
-                x: 0.0,
-                y: 0.0,
-                z: 0.0,
-            };
-            player.factor = 0.0;
-        } else {
-            player.factor *= 0.94;
-        };
+pub fn confine_player_size(
+    mut player_query: Query<&mut Transform, With<Player>>,
+    window_query: Query<&Window, With<PrimaryWindow>>,
+) {
+    if let Ok(mut player_transform) = player_query.get_single_mut() {
+        let window = window_query.get_single().unwrap();
+
+        let lesser_dim = window.height().min(window.width()) * 0.8 / PLAYER_SIZE;
+
+        if player_transform.scale.y > lesser_dim {
+            player_transform.scale.y = lesser_dim;
+            player_transform.scale.x = lesser_dim;
+        }
+
+        if player_transform.scale.y < 0.5 {
+            player_transform.scale.y = 0.5;
+            player_transform.scale.x = 0.5;
+        }
     }
 }
 
 pub fn confine_player_movement(
-    mut player_query: Query<(&mut Transform, &Player)>,
+    mut player_query: Query<(&mut Transform, &mut Player)>,
     window_query: Query<&Window, With<PrimaryWindow>>,
 ) {
-    if let Ok((mut player_transform, player)) = player_query.get_single_mut() {
+    if let Ok((mut player_transform, mut player)) = player_query.get_single_mut() {
         let window = window_query.get_single().unwrap();
 
-        let half_player_size = PLAYER_SIZE * player.scale_factor / 2.0;
+        let half_player_size = PLAYER_SIZE * player_transform.scale.y / 2.0;
         let x_min = 0.0 + half_player_size;
         let x_max = window.width() - half_player_size;
         let y_min = 0.0 + half_player_size;
@@ -161,13 +150,17 @@ pub fn confine_player_movement(
         let mut translation = player_transform.translation;
 
         if translation.x < x_min {
+            player.speed.x *= -1.;
             translation.x = x_min;
         } else if translation.x > x_max {
+            player.speed.x *= -1.;
             translation.x = x_max;
         }
         if translation.y < y_min {
+            player.speed.y *= -1.;
             translation.y = y_min;
         } else if translation.y > y_max {
+            player.speed.y *= -1.;
             translation.y = y_max;
         }
 
