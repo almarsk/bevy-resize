@@ -58,8 +58,6 @@ pub fn spawn_player(
 
     let mesh = star_mesh (7, PLAYER_SIZE / 2., PLAYER_SIZE / 3.);
 
-    info_once!("{:?}", mesh);
-
     commands.spawn((
         ColorMesh2dBundle {
             mesh: meshes.add(mesh).into(),
