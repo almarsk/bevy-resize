@@ -1,5 +1,5 @@
 use std::f32::consts::PI;
-
+use rand::prelude::*;
 use bevy::{
     prelude::*, 
     render::{mesh, render_asset},
@@ -34,4 +34,14 @@ pub fn rectangle_outline (width: f32, height: f32) -> mesh::Mesh {
     mesh::Mesh::new(mesh::PrimitiveTopology::LineStrip, render_asset::RenderAssetUsages::default())
         .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, positions)
         .with_inserted_indices(bevy::render::mesh::Indices::U16(indices))
+}
+
+pub fn random_lines (n_lines: u16, min: Vec3, max: Vec3) -> mesh::Mesh {
+    let mut positions = Vec::new();
+    for _ in 0..n_lines {
+        positions.push(min + (max - min) * Vec3::new(random::<f32>(), random::<f32>(), random::<f32>()));
+        positions.push(min + (max - min) * Vec3::new(random::<f32>(), random::<f32>(), random::<f32>()));
+    }
+    mesh::Mesh::new(mesh::PrimitiveTopology::LineList, render_asset::RenderAssetUsages::default())
+        .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, positions)
 }

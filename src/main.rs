@@ -47,7 +47,7 @@ pub fn spawn_level(
         Mesh2d(meshes.add(mesh).into()),
         MeshMaterial2d(materials.add(
             ColorMaterial::from_color(
-                Color::linear_rgba(120.0, 56.0, 0.0, 0.8)
+                Color::linear_rgba(1., 0.8, 0.0, 1.)
             )
         )),
         Level {},
@@ -55,6 +55,21 @@ pub fn spawn_level(
             min: Vec2::splat(0.),
             max: LEVEL_DIM,
         },
+    ));
+
+    // Beautiful background
+    commands.spawn((
+        Mesh2d(meshes.add(mesh_utils::random_lines(
+            100, 
+            Vec3::splat(0.), 
+            Vec3::new(LEVEL_DIM.x, LEVEL_DIM.y, 0.)
+        )).into()),
+        MeshMaterial2d(materials.add(
+            ColorMaterial::from_color(
+                Color::linear_rgba(0., 0.3, 0.5, 1.)
+            )
+        )),
+        Transform::from_xyz(0., 0., -1.),
     ));
 }
 
@@ -68,7 +83,7 @@ pub fn spawn_player(
     commands.spawn((
         Mesh2d(meshes.add(mesh).into()),
         MeshMaterial2d(materials.add(ColorMaterial::from_color(
-            Color::linear_rgba(120.0, 56.0, 0.0, 0.8)
+            Color::linear_rgba(1., 0.8, 0.0, 1.)
         ))),
         Transform::from_translation(Vec3::new(LEVEL_DIM.x, LEVEL_DIM.y, 0.)/2.),
         Player {
