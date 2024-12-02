@@ -1,13 +1,19 @@
-use std::f32::consts::{PI};
+use std::f32::consts::PI;
 
-use bevy::prelude::*;
-use bevy::render::render_asset::RenderAssetUsages;
-use bevy::render::mesh::PrimitiveTopology;
-use bevy::window::PrimaryWindow;
+use bevy::{
+    prelude::*, render::{
+        mesh::PrimitiveTopology, render_asset::RenderAssetUsages
+    },
+    window::PrimaryWindow,
+};
 
 pub const PLAYER_SPEED: f32 = 500.0;
 pub const PLAYER_SIZE: f32 = 100.0;
 pub const SCALE_FACTOR: f32 = 1.1;
+pub const LEVEL_DIM: Vec3 = Vec3::new(1280., 720., 0.);
+pub const VIEWPORT_DIM: Vec3 = Vec3::new(1280., 720., 0.);
+pub const TOP_LEFT: Vec3 = Vec3::new(0., VIEWPORT_DIM.y, 0.);
+
 
 fn main() {
     App::new()
@@ -50,31 +56,17 @@ pub fn star_mesh (points: u16, radius: f32, inner_radius: f32) -> Mesh {
 
 pub fn spawn_player(
     mut commands: Commands,
-    window_query: Query<&Window, With<PrimaryWindow>>,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut colors: ResMut<Assets<ColorMaterial>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
-    let window = window_query.get_single().unwrap();
-
     let mesh = star_mesh (7, PLAYER_SIZE / 2., PLAYER_SIZE / 3.);
 
     commands.spawn((
-        ColorMesh2dBundle {
-            mesh: meshes.add(mesh).into(),
-            transform: Transform {
-                translation: Vec3 {
-                    x: window.width() / 2.0,
-                    y: window.height() / 2.0,
-                    z: 0.0,
-                },
-                ..Default::default()
-            },
-            material: colors.add(ColorMaterial {
-                color: Color::linear_rgba(120.0, 56.0, 0.0, 0.8),
-                texture: None,
-            }),
-            ..Default::default()
-        },
+        Mesh2d(meshes.add(mesh).into()),
+        MeshMaterial2d(materials.add(ColorMaterial::from_color(
+            Color::linear_rgba(120.0, 56.0, 0.0, 0.8)
+        ))),
+        Transform::from_translation(LEVEL_DIM/2.),
         Player {
             speed: Vec3::new(0., 0., 0.),
             rotation_speed: 0.,
@@ -82,13 +74,11 @@ pub fn spawn_player(
     ));
 }
 
-pub fn spawn_camera(mut commands: Commands, window_query: Query<&Window, With<PrimaryWindow>>) {
-    let window = window_query.get_single().unwrap();
-
-    commands.spawn(Camera2dBundle {
-        transform: Transform::from_xyz(window.width() / 2.0, window.height() / 2.0, 0.0),
-        ..default()
-    });
+pub fn spawn_camera(mut commands: Commands) {
+    commands.spawn((
+        Camera2d::default(),
+        Transform::from_translation(LEVEL_DIM/2.),
+    ));
 }
 
 pub fn player_size(
@@ -145,11 +135,11 @@ pub fn player_input(
 
 pub fn player_movement(mut player_query: Query<(&mut Transform, &mut Player)>, time: Res<Time>) {
     if let Ok((mut transform, mut player)) = player_query.get_single_mut() {
-        let delta = player.speed * PLAYER_SPEED * time.delta_seconds() / transform.scale.y;
+        let delta = player.speed * PLAYER_SPEED * time.delta_secs() / transform.scale.y;
         transform.translation += delta;
         player.speed *= Vec3::splat(0.97);
 
-        let rotation_delta = player.rotation_speed * time.delta_seconds() / transform.scale.y;
+        let rotation_delta = player.rotation_speed * time.delta_secs() / transform.scale.y;
         transform.rotate_z(rotation_delta);
         player.rotation_speed *= 0.97;
     }
@@ -208,39 +198,24 @@ pub struct CoordinateDisplay;
 
 pub fn spawn_coordinate_display(
     mut commands: Commands,
-    window_query: Query<&Window, With<PrimaryWindow>>,
 ) {
-    let window = window_query.get_single().unwrap();
-
-    let txt = Text {
-        sections: vec![TextSection {
-            value: "Coordinates: (0, 0)".to_string(),
-            style: TextStyle {
-                font_size: 30.0,
-                color: Color::WHITE,
-                ..Default::default()
-            },
-        }],
-        ..Default::default()
-    };
-
-    commands
-        .spawn(Text2dBundle {
-            text: txt,
-            transform: Transform::from_xyz(window.width() * 0.2, window.height() * 0.9, 0.0), // Position the text
-            ..default()
-        })
-        .insert(CoordinateDisplay);
+    commands.spawn((
+        Text2d::new("Player XY: [-, -]"),
+        TextLayout::new_with_justify(JustifyText::Left),
+        Transform::from_translation(TOP_LEFT + Vec3::new(10., -10., 0.)),
+        bevy::sprite::Anchor::TopLeft,
+        CoordinateDisplay {},
+    ));
 }
 
 pub fn update_coordinate_display(
     player_query: Query<&Transform, With<Player>>,
-    mut text_query: Query<(&mut Text, &CoordinateDisplay)>,
+    mut text_query: Query<(&mut Text2d, &CoordinateDisplay)>,
 ) {
     if let Ok(player_transform) = player_query.get_single() {
         if let Ok((mut text, _)) = text_query.get_single_mut() {
-            text.sections[0].value = format!(
-                "Coordinates: ({:.2}, {:.2})",
+            text.0 = format!(
+                "Player XY: [{:.0}, {:.0}]",
                 player_transform.translation.x, player_transform.translation.y
             );
         }
