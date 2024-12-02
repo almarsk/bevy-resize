@@ -22,3 +22,16 @@ pub fn star_mesh (points: u16, radius: f32, inner_radius: f32) -> mesh::Mesh {
         .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, positions)
         .with_inserted_indices(bevy::render::mesh::Indices::U16(indices))
 }
+
+pub fn rectangle_outline (width: f32, height: f32) -> mesh::Mesh {
+    let positions = vec![
+        Vec3::new(0., 0., 0.),
+        Vec3::new(width, 0., 0.),
+        Vec3::new(width, height, 0.),
+        Vec3::new(0., height, 0.),
+    ];
+    let indices = vec![0, 1, 2, 3, 0];
+    mesh::Mesh::new(mesh::PrimitiveTopology::LineStrip, render_asset::RenderAssetUsages::default())
+        .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, positions)
+        .with_inserted_indices(bevy::render::mesh::Indices::U16(indices))
+}
