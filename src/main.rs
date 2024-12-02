@@ -1,4 +1,8 @@
+use std::f32::consts::{PI};
+
 use bevy::prelude::*;
+use bevy::render::render_asset::RenderAssetUsages;
+use bevy::render::mesh::PrimitiveTopology;
 use bevy::window::PrimaryWindow;
 
 pub const PLAYER_SPEED: f32 = 500.0;
@@ -26,6 +30,24 @@ pub struct Player {
     rotation_speed: f32,
 }
 
+pub fn star_mesh (points: u16, radius: f32, inner_radius: f32) -> Mesh {
+    let mut positions = Vec::new();
+    let mut indices = Vec::new();
+    positions.push(Vec3::splat(0.));
+    for i in 0..(points * 2) {
+        let angle = i as f32 / points as f32 * PI;
+        let r = if i % 2 == 0 { radius } else { inner_radius };
+        positions.push(Vec3::new(r * angle.cos(), r * angle.sin(), 0.));
+        indices.push(0);
+        indices.push(i + 1);
+        indices.push((i + 1) % (2 * points) + 1);
+    }
+
+    Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::default())
+        .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, positions)
+        .with_inserted_indices(bevy::render::mesh::Indices::U16(indices))
+}
+
 pub fn spawn_player(
     mut commands: Commands,
     window_query: Query<&Window, With<PrimaryWindow>>,
@@ -34,12 +56,7 @@ pub fn spawn_player(
 ) {
     let window = window_query.get_single().unwrap();
 
-    let sides = 6;
-
-    let circle = RegularPolygon::new(PLAYER_SIZE / 2., sides);
-    let mesh = Mesh::from(circle);
-
-    info_once!("{:?}", mesh);
+    let mesh = star_mesh (7, PLAYER_SIZE / 2., PLAYER_SIZE / 3.);
 
     commands.spawn((
         ColorMesh2dBundle {
