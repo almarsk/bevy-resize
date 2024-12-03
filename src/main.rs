@@ -182,9 +182,8 @@ pub fn confine_projectile(
     window_query: Query<&Window, With<PrimaryWindow>>,
     mut commands: Commands,
 ) {
+    let window = window_query.get_single().unwrap();
     for (transform, projectile) in projectile_query.iter() {
-        let window = window_query.get_single().unwrap();
-
         let half_player_size = PROJECTILE_SIZE * transform.scale.y / 2.0;
         let x_min = 0.0 + half_player_size;
         let x_max = window.width() - half_player_size;
@@ -238,7 +237,10 @@ pub fn player_rotation(mut player_query: Query<(&mut Transform, &mut Player)>, t
 
 pub fn player_movement(mut player_query: Query<(&mut Transform, &mut Player)>, time: Res<Time>) {
     if let Ok((mut transform, mut player)) = player_query.get_single_mut() {
-        transform.rotation = Quat::from_xyzw(player.speed.x, player.speed.y, player.speed.z, 0.);
+        let direction = player.speed.normalize();
+        let angle = direction.y.atan2(direction.x);
+        transform.rotation = Quat::from_rotation_z(angle);
+
         if player.speed.length() < 0.01 {
             return;
         }
