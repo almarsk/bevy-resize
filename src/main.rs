@@ -230,6 +230,7 @@ pub fn player_rotation(mut player_query: Query<(&mut Transform, &mut Player)>, t
         player.speed *= Vec3::splat(0.97);
 
         let rotation_delta = player.rotation_speed * time.delta_secs() / transform.scale.y;
+
         transform.rotate_z(rotation_delta);
         player.rotation_speed *= 0.97;
     }
