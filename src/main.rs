@@ -1,12 +1,21 @@
 mod mesh_utils;
 mod camera;
 
-use bevy::prelude::*;
+use std::f32::consts::PI;
+
+use bevy::{
+    prelude::*, render::{
+        mesh::PrimitiveTopology, render_asset::RenderAssetUsages
+    },
+    window::PrimaryWindow,
+};
 
 pub const PLAYER_SPEED: f32 = 500.0;
 pub const PLAYER_SIZE: f32 = 100.0;
 pub const SCALE_FACTOR: f32 = 1.1;
+
 pub const LEVEL_DIM: Vec2 = Vec2::new(1920., 1080.);
+
 pub const VIEWPORT_DIM: Vec3 = Vec3::new(1280., 720., 0.);
 pub const TOP_LEFT: Vec3 = Vec3::new(0., VIEWPORT_DIM.y, 0.);
 
@@ -78,19 +87,28 @@ pub fn spawn_player(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
+
     let mesh = mesh_utils::star_mesh (7, PLAYER_SIZE / 2., PLAYER_SIZE / 3.);
+
 
     commands.spawn((
         Mesh2d(meshes.add(mesh).into()),
         MeshMaterial2d(materials.add(ColorMaterial::from_color(
-            Color::linear_rgba(1., 0.8, 0.0, 1.)
+            Color::linear_rgba(120.0, 56.0, 0.0, 0.8)
         ))),
-        Transform::from_translation(Vec3::new(LEVEL_DIM.x, LEVEL_DIM.y, 0.)/2.),
+        Transform::from_translation(LEVEL_DIM/2.),
         Player {
             speed: Vec3::new(0., 0., 0.),
             rotation_speed: 0.,
         },
         camera::CameraFocus {},
+    ));
+}
+
+pub fn spawn_camera(mut commands: Commands) {
+    commands.spawn((
+        Camera2d::default(),
+        Transform::from_translation(LEVEL_DIM/2.),
     ));
 }
 
