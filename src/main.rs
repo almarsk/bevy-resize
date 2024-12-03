@@ -1,3 +1,6 @@
+mod mesh_utils;
+mod camera;
+
 use std::f32::consts::PI;
 
 use bevy::{
@@ -10,7 +13,9 @@ use bevy::{
 pub const PLAYER_SPEED: f32 = 500.0;
 pub const PLAYER_SIZE: f32 = 100.0;
 pub const SCALE_FACTOR: f32 = 1.1;
-pub const LEVEL_DIM: Vec3 = Vec3::new(1280., 720., 0.);
+
+pub const LEVEL_DIM: Vec2 = Vec2::new(1920., 1080.);
+
 pub const VIEWPORT_DIM: Vec3 = Vec3::new(1280., 720., 0.);
 pub const TOP_LEFT: Vec3 = Vec3::new(0., VIEWPORT_DIM.y, 0.);
 
@@ -18,12 +23,13 @@ pub const TOP_LEFT: Vec3 = Vec3::new(0., VIEWPORT_DIM.y, 0.);
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
+        .add_plugins(camera::CameraPlugin)
         .add_systems(
             Startup,
-            (spawn_camera, spawn_player, spawn_coordinate_display),
+            (spawn_level, spawn_player, spawn_coordinate_display),
         )
         .add_systems(Update, (player_size, confine_player_size).chain())
-        .add_systems(Update, player_input)
+        .add_systems(Update, player_acceleration)
         .add_systems(Update, player_rotation)
         .add_systems(Update, (player_movement, confine_player_movement).chain())
         .add_systems(Update, update_coordinate_display)
@@ -36,22 +42,44 @@ pub struct Player {
     rotation_speed: f32,
 }
 
-pub fn star_mesh (points: u16, radius: f32, inner_radius: f32) -> Mesh {
-    let mut positions = Vec::new();
-    let mut indices = Vec::new();
-    positions.push(Vec3::splat(0.));
-    for i in 0..(points * 2) {
-        let angle = i as f32 / points as f32 * PI;
-        let r = if i % 2 == 0 { radius } else { inner_radius };
-        positions.push(Vec3::new(r * angle.cos(), r * angle.sin(), 0.));
-        indices.push(0);
-        indices.push(i + 1);
-        indices.push((i + 1) % (2 * points) + 1);
-    }
+#[derive(Component)]
+pub struct Level {}
 
-    Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::default())
-        .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, positions)
-        .with_inserted_indices(bevy::render::mesh::Indices::U16(indices))
+pub fn spawn_level(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+) {
+    let mesh = mesh_utils::rectangle_outline(LEVEL_DIM.x, LEVEL_DIM.y);
+
+    commands.spawn((
+        Mesh2d(meshes.add(mesh).into()),
+        MeshMaterial2d(materials.add(
+            ColorMaterial::from_color(
+                Color::linear_rgba(1., 0.8, 0.0, 1.)
+            )
+        )),
+        Level {},
+        camera::CameraBounds {
+            min: Vec2::splat(0.),
+            max: LEVEL_DIM,
+        },
+    ));
+
+    // Beautiful background
+    commands.spawn((
+        Mesh2d(meshes.add(mesh_utils::random_lines(
+            100, 
+            Vec3::splat(0.), 
+            Vec3::new(LEVEL_DIM.x, LEVEL_DIM.y, 0.)
+        )).into()),
+        MeshMaterial2d(materials.add(
+            ColorMaterial::from_color(
+                Color::linear_rgba(0., 0.3, 0.5, 1.)
+            )
+        )),
+        Transform::from_xyz(0., 0., -1.),
+    ));
 }
 
 pub fn spawn_player(
@@ -59,7 +87,9 @@ pub fn spawn_player(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
-    let mesh = star_mesh (7, PLAYER_SIZE / 2., PLAYER_SIZE / 3.);
+
+    let mesh = mesh_utils::star_mesh (7, PLAYER_SIZE / 2., PLAYER_SIZE / 3.);
+
 
     commands.spawn((
         Mesh2d(meshes.add(mesh).into()),
@@ -71,6 +101,7 @@ pub fn spawn_player(
             speed: Vec3::new(0., 0., 0.),
             rotation_speed: 0.,
         },
+        camera::CameraFocus {},
     ));
 }
 
@@ -113,7 +144,7 @@ pub fn confine_player_size(mut player_query: Query<&mut Transform, With<Player>>
     }
 }
 
-pub fn player_input(
+pub fn player_acceleration(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut player_query: Query<&mut Player>,
 ) {
@@ -161,16 +192,13 @@ pub fn player_rotation(
 
 pub fn confine_player_movement(
     mut player_query: Query<(&mut Transform, &mut Player)>,
-    window_query: Query<&Window, With<PrimaryWindow>>,
 ) {
     if let Ok((mut player_transform, mut player)) = player_query.get_single_mut() {
-        let window = window_query.get_single().unwrap();
-
         let half_player_size = PLAYER_SIZE * player_transform.scale.y / 2.0;
         let x_min = 0.0 + half_player_size;
-        let x_max = window.width() - half_player_size;
+        let x_max = LEVEL_DIM.x - half_player_size;
         let y_min = 0.0 + half_player_size;
-        let y_max = window.height() - half_player_size;
+        let y_max = LEVEL_DIM.y - half_player_size;
 
         let mut translation = player_transform.translation;
 
