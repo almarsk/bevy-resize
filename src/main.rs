@@ -11,12 +11,6 @@ pub const VIEWPORT_DIM: Vec3 = Vec3::new(1280., 720., 0.);
 pub const TOP_LEFT: Vec3 = Vec3::new(0., VIEWPORT_DIM.y, 0.);
 
 
-pub const LEVEL_DIM: Vec2 = Vec2::new(1920., 1080.);
-
-pub const VIEWPORT_DIM: Vec3 = Vec3::new(1280., 720., 0.);
-pub const TOP_LEFT: Vec3 = Vec3::new(0., VIEWPORT_DIM.y, 0.);
-
-
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
