@@ -37,15 +37,22 @@ pub fn camera_follow_focus(
     if let Ok(focus_transform) = focus_query.get_single() {
         if let Ok(mut camera_transform) = camera_query.get_single_mut() {
             let follow_direction = focus_transform.translation - camera_transform.translation;
-            if follow_direction.x > FOLLOW_THRESHOLD.x {
-                camera_transform.translation.x += (follow_direction.x - FOLLOW_THRESHOLD.x) / CAMERA_SMOOTHING;
-            } else if follow_direction.x < -FOLLOW_THRESHOLD.x {
-                camera_transform.translation.x += (follow_direction.x + FOLLOW_THRESHOLD.x) / CAMERA_SMOOTHING;
+
+            let threshold = FOLLOW_THRESHOLD * camera_transform.scale;
+
+            if follow_direction.x > threshold.x {
+                camera_transform.translation.x +=
+                    (follow_direction.x - threshold.x) / CAMERA_SMOOTHING;
+            } else if follow_direction.x < -threshold.x {
+                camera_transform.translation.x +=
+                    (follow_direction.x + threshold.x) / CAMERA_SMOOTHING;
             }
-            if follow_direction.y > FOLLOW_THRESHOLD.y {
-                camera_transform.translation.y += (follow_direction.y - FOLLOW_THRESHOLD.y) / CAMERA_SMOOTHING;
-            } else if follow_direction.y < -FOLLOW_THRESHOLD.y {
-                camera_transform.translation.y += (follow_direction.y + FOLLOW_THRESHOLD.y) / CAMERA_SMOOTHING;
+            if follow_direction.y > threshold.y {
+                camera_transform.translation.y +=
+                    (follow_direction.y - threshold.y) / CAMERA_SMOOTHING;
+            } else if follow_direction.y < -threshold.y {
+                camera_transform.translation.y +=
+                    (follow_direction.y + threshold.y) / CAMERA_SMOOTHING;
             }
         }
     }
@@ -58,7 +65,7 @@ pub fn confine_camera_movement(
     if let Ok(bounds) = bounds_query.get_single() {
         if let Ok((mut camera_transform, camera_projection)) = camera_query.get_single_mut() {
             // TODO: Compensate for camera scaling
-            let view_margin = 20.;
+
             let x_min = bounds.min.x
                 - camera_projection.area.min.x * camera_transform.scale.x
                 - VIEW_MARGIN;
