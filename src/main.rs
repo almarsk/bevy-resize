@@ -1,5 +1,5 @@
-mod mesh_utils;
 mod camera;
+mod mesh_utils;
 
 use bevy::prelude::*;
 
@@ -9,7 +9,6 @@ pub const SCALE_FACTOR: f32 = 1.1;
 pub const LEVEL_DIM: Vec2 = Vec2::new(1920., 1080.);
 pub const VIEWPORT_DIM: Vec3 = Vec3::new(1280., 720., 0.);
 pub const TOP_LEFT: Vec3 = Vec3::new(0., VIEWPORT_DIM.y, 0.);
-
 
 fn main() {
     App::new()
@@ -45,11 +44,9 @@ pub fn spawn_level(
 
     commands.spawn((
         Mesh2d(meshes.add(mesh).into()),
-        MeshMaterial2d(materials.add(
-            ColorMaterial::from_color(
-                Color::linear_rgba(1., 0.8, 0.0, 1.)
-            )
-        )),
+        MeshMaterial2d(materials.add(ColorMaterial::from_color(Color::linear_rgba(
+            1., 0.8, 0.0, 1.,
+        )))),
         Level {},
         camera::CameraBounds {
             min: Vec2::splat(0.),
@@ -59,16 +56,18 @@ pub fn spawn_level(
 
     // Beautiful background
     commands.spawn((
-        Mesh2d(meshes.add(mesh_utils::random_lines(
-            100, 
-            Vec3::splat(0.), 
-            Vec3::new(LEVEL_DIM.x, LEVEL_DIM.y, 0.)
-        )).into()),
-        MeshMaterial2d(materials.add(
-            ColorMaterial::from_color(
-                Color::linear_rgba(0., 0.3, 0.5, 1.)
-            )
-        )),
+        Mesh2d(
+            meshes
+                .add(mesh_utils::random_lines(
+                    100,
+                    Vec3::splat(0.),
+                    Vec3::new(LEVEL_DIM.x, LEVEL_DIM.y, 0.),
+                ))
+                .into(),
+        ),
+        MeshMaterial2d(materials.add(ColorMaterial::from_color(Color::linear_rgba(
+            0., 0.3, 0.5, 1.,
+        )))),
         Transform::from_xyz(0., 0., -1.),
     ));
 }
@@ -78,15 +77,14 @@ pub fn spawn_player(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
-
-    let mesh = mesh_utils::star_mesh (7, PLAYER_SIZE / 2., PLAYER_SIZE / 3.);
+    let mesh = mesh_utils::star_mesh(7, PLAYER_SIZE / 2., PLAYER_SIZE / 3.);
 
     commands.spawn((
         Mesh2d(meshes.add(mesh).into()),
-        MeshMaterial2d(materials.add(ColorMaterial::from_color(
-            Color::linear_rgba(1., 0.8, 0.0, 1.)
-        ))),
-        Transform::from_translation(Vec3::new(LEVEL_DIM.x, LEVEL_DIM.y, 0.)/2.),
+        MeshMaterial2d(materials.add(ColorMaterial::from_color(Color::linear_rgba(
+            1., 0.8, 0.0, 1.,
+        )))),
+        Transform::from_translation(Vec3::new(LEVEL_DIM.x, LEVEL_DIM.y, 0.) / 2.),
         Player {
             speed: Vec3::new(0., 0., 0.),
             rotation_speed: 0.,
@@ -173,9 +171,7 @@ pub fn player_rotation(
     }
 }
 
-pub fn confine_player_movement(
-    mut player_query: Query<(&mut Transform, &mut Player)>,
-) {
+pub fn confine_player_movement(mut player_query: Query<(&mut Transform, &mut Player)>) {
     if let Ok((mut player_transform, mut player)) = player_query.get_single_mut() {
         let half_player_size = PLAYER_SIZE * player_transform.scale.y / 2.0;
         let x_min = 0.0 + half_player_size;
@@ -207,9 +203,7 @@ pub fn confine_player_movement(
 #[derive(Component)]
 pub struct CoordinateDisplay;
 
-pub fn spawn_coordinate_display(
-    mut commands: Commands,
-) {
+pub fn spawn_coordinate_display(mut commands: Commands) {
     commands.spawn((
         Text2d::new("Player XY: [-, -]"),
         TextLayout::new_with_justify(JustifyText::Left),
