@@ -1,28 +1,26 @@
 mod camera;
+mod level;
 mod mesh_utils;
+mod ui;
 
 use bevy::prelude::*;
+use level::LEVEL_DIM;
 
 pub const PLAYER_SPEED: f32 = 500.0;
 pub const PLAYER_SIZE: f32 = 100.0;
 pub const SCALE_FACTOR: f32 = 1.1;
-pub const LEVEL_DIM: Vec2 = Vec2::new(1920., 1080.);
-pub const VIEWPORT_DIM: Vec3 = Vec3::new(1280., 720., 0.);
-pub const TOP_LEFT: Vec3 = Vec3::new(0., VIEWPORT_DIM.y, 0.);
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(camera::CameraPlugin)
-        .add_systems(
-            Startup,
-            (spawn_level, spawn_player, spawn_coordinate_display, spawn_obstacles),
-        )
+        .add_plugins(level::LevelPlugin)
+        .add_plugins(ui::UIPlugin)
+        .add_systems(Startup, spawn_player)
         .add_systems(Update, (player_size, confine_player_size).chain())
         .add_systems(Update, player_acceleration)
         .add_systems(Update, player_rotation)
         .add_systems(Update, (player_movement, confine_player_movement).chain())
-        .add_systems(Update, update_coordinate_display)
         .run();
 }
 
@@ -30,49 +28,6 @@ fn main() {
 pub struct Player {
     speed: Vec3,
     rotation_speed: f32,
-}
-
-#[derive(Component)]
-pub struct Level {}
-
-#[derive(Component)]
-pub struct Obstacle {}
-
-pub fn spawn_level(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
-) {
-    let mesh = mesh_utils::rectangle_outline(LEVEL_DIM.x, LEVEL_DIM.y);
-
-    commands.spawn((
-        Mesh2d(meshes.add(mesh).into()),
-        MeshMaterial2d(materials.add(ColorMaterial::from_color(Color::linear_rgba(
-            1., 0.8, 0.0, 1.,
-        )))),
-        Level {},
-        camera::CameraBounds {
-            min: Vec2::splat(0.),
-            max: LEVEL_DIM,
-        },
-    ));
-
-    // Beautiful background
-    commands.spawn((
-        Mesh2d(
-            meshes
-                .add(mesh_utils::random_lines(
-                    100,
-                    Vec3::splat(0.),
-                    Vec3::new(LEVEL_DIM.x, LEVEL_DIM.y, 0.),
-                ))
-                .into(),
-        ),
-        MeshMaterial2d(materials.add(ColorMaterial::from_color(Color::linear_rgba(
-            0., 0.3, 0.5, 1.,
-        )))),
-        Transform::from_xyz(0., 0., -1.),
-    ));
 }
 
 pub fn spawn_player(
@@ -94,33 +49,6 @@ pub fn spawn_player(
         },
         camera::CameraFocus {},
     ));
-}
-
-pub fn spawn_obstacles(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
-) {
-    let positions = vec![
-        Vec3::new(0.25, 0.25, 0.),
-        Vec3::new(0.75, 0.25, 0.),
-        Vec3::new(0.25, 0.75, 0.),
-        Vec3::new(0.75, 0.75, 0.),
-    ];
-    
-    for pos in positions {
-        let mesh = mesh_utils::triangle_mesh(1.);
-        commands.spawn((
-            Mesh2d(meshes.add(mesh).into()),
-            MeshMaterial2d(materials.add(ColorMaterial::from_color(
-                Color::linear_rgba(0., 0.8, 0.4, 1.)
-            ))),
-            Transform::from_translation(Vec3::new(LEVEL_DIM.x, LEVEL_DIM.y, 0.) * pos)
-                .with_scale(Vec3::new(100., 100., 0.)),
-            Obstacle {},
-        ));
-    }
-    
 }
 
 pub fn player_size(
@@ -227,32 +155,5 @@ pub fn confine_player_movement(mut player_query: Query<(&mut Transform, &mut Pla
         }
 
         player_transform.translation = translation;
-    }
-}
-
-#[derive(Component)]
-pub struct CoordinateDisplay;
-
-pub fn spawn_coordinate_display(mut commands: Commands) {
-    commands.spawn((
-        Text2d::new("Player XY: [-, -]"),
-        TextLayout::new_with_justify(JustifyText::Left),
-        Transform::from_translation(TOP_LEFT + Vec3::new(10., -10., 0.)),
-        bevy::sprite::Anchor::TopLeft,
-        CoordinateDisplay {},
-    ));
-}
-
-pub fn update_coordinate_display(
-    player_query: Query<&Transform, With<Player>>,
-    mut text_query: Query<(&mut Text2d, &CoordinateDisplay)>,
-) {
-    if let Ok(player_transform) = player_query.get_single() {
-        if let Ok((mut text, _)) = text_query.get_single_mut() {
-            text.0 = format!(
-                "Player XY: [{:.0}, {:.0}]",
-                player_transform.translation.x, player_transform.translation.y
-            );
-        }
     }
 }
