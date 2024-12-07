@@ -1,14 +1,13 @@
-use std::f32::consts::PI;
+use std::f32::consts::{PI, TAU};
 use rand::prelude::*;
 use bevy::{
-    prelude::*, 
-    render::{mesh, render_asset},
+    prelude::*, render::{mesh, render_asset}
 };
 
 pub fn star_mesh (points: u16, radius: f32, inner_radius: f32) -> mesh::Mesh {
-    let mut positions = Vec::new();
-    let mut indices = Vec::new();
-    positions.push(Vec3::splat(0.));
+    let mut positions = Vec::with_capacity((points * 2 + 1) as usize);
+    let mut indices = Vec::with_capacity((points * 6) as usize);
+    positions.push(Vec3::ZERO);
     for i in 0..(points * 2) {
         let angle = i as f32 / points as f32 * PI;
         let r = if i % 2 == 0 { radius } else { inner_radius };
@@ -21,6 +20,19 @@ pub fn star_mesh (points: u16, radius: f32, inner_radius: f32) -> mesh::Mesh {
     mesh::Mesh::new(mesh::PrimitiveTopology::TriangleList, render_asset::RenderAssetUsages::default())
         .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, positions)
         .with_inserted_indices(bevy::render::mesh::Indices::U16(indices))
+}
+
+pub fn triangle_mesh (randomness: f32) -> mesh::Mesh {
+    let mut positions = Vec::new();
+    let range = 0..3;
+    for i in range {
+        let angle = i as f32 * TAU / 3. - TAU / 12.;
+        let r = 1. + randomness * random::<f32>();
+        positions.push(Vec3::new(r * angle.cos(), r * angle.sin(), 0.));
+    }
+
+    mesh::Mesh::new(mesh::PrimitiveTopology::TriangleList, render_asset::RenderAssetUsages::default())
+        .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, positions)
 }
 
 pub fn rectangle_outline (width: f32, height: f32) -> mesh::Mesh {
