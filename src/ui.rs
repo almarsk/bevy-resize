@@ -1,4 +1,4 @@
-use crate::Player;
+use super::player::Player;
 use bevy::prelude::*;
 
 pub struct UIPlugin;

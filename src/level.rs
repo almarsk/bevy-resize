@@ -7,7 +7,7 @@ pub const LEVEL_DIM: Vec2 = Vec2::new(1920., 1080.);
 
 #[derive(Component)]
 pub struct Level {
-    _dimension: Vec2,
+    pub dimension: Vec2,
 }
 
 #[derive(Component)]
@@ -33,7 +33,7 @@ pub fn spawn_level(
             1., 0.8, 0.0, 1.,
         )))),
         Level {
-            _dimension: LEVEL_DIM,
+            dimension: LEVEL_DIM,
         },
         camera::CameraBounds {
             min: Vec2::splat(0.),
