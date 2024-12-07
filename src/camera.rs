@@ -1,5 +1,9 @@
 use bevy::prelude::*;
 
+const CAMERA_SMOOTHING: f32 = 10.;
+const FOLLOW_THRESHOLD: Vec3 = Vec3::new(100., 100., 0.);
+const VIEW_MARGIN: f32 = 20.;
+
 pub struct CameraPlugin;
 
 impl Plugin for CameraPlugin {
@@ -33,15 +37,15 @@ pub fn camera_follow_focus(
     if let Ok(focus_transform) = focus_query.get_single() {
         if let Ok(mut camera_transform) = camera_query.get_single_mut() {
             let follow_direction = focus_transform.translation - camera_transform.translation;
-            if follow_direction.x > 100. {
-                camera_transform.translation.x += (follow_direction.x - 100.) / 10.;
-            } else if follow_direction.x < -100. {
-                camera_transform.translation.x += (follow_direction.x + 100.) / 10.;
+            if follow_direction.x > FOLLOW_THRESHOLD.x {
+                camera_transform.translation.x += (follow_direction.x - FOLLOW_THRESHOLD.x) / CAMERA_SMOOTHING;
+            } else if follow_direction.x < -FOLLOW_THRESHOLD.x {
+                camera_transform.translation.x += (follow_direction.x + FOLLOW_THRESHOLD.x) / CAMERA_SMOOTHING;
             }
-            if follow_direction.y > 100. {
-                camera_transform.translation.y += (follow_direction.y - 100.) / 10.;
-            } else if follow_direction.y < -100. {
-                camera_transform.translation.y += (follow_direction.y + 100.) / 10.;
+            if follow_direction.y > FOLLOW_THRESHOLD.y {
+                camera_transform.translation.y += (follow_direction.y - FOLLOW_THRESHOLD.y) / CAMERA_SMOOTHING;
+            } else if follow_direction.y < -FOLLOW_THRESHOLD.y {
+                camera_transform.translation.y += (follow_direction.y + FOLLOW_THRESHOLD.y) / CAMERA_SMOOTHING;
             }
         }
     }
@@ -57,14 +61,14 @@ pub fn confine_camera_movement(
             let view_margin = 20.;
             let x_min = bounds.min.x
                 - camera_projection.area.min.x * camera_transform.scale.x
-                - view_margin;
+                - VIEW_MARGIN;
             let x_max = bounds.max.x - camera_projection.area.max.x * camera_transform.scale.x
-                + view_margin;
+                + VIEW_MARGIN;
             let y_min = bounds.min.y
                 - camera_projection.area.min.y * camera_transform.scale.y
-                - view_margin;
+                - VIEW_MARGIN;
             let y_max = bounds.max.y - camera_projection.area.max.y * camera_transform.scale.y
-                + view_margin;
+                + VIEW_MARGIN;
 
             if camera_transform.translation.x < x_min {
                 camera_transform.translation.x = x_min;
