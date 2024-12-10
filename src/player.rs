@@ -11,8 +11,9 @@ pub const SPEED_DECAY: f32 = 0.99;
 pub const ROTATION_DECAY: f32 = 0.99;
 pub const BOUNCE_SPEED_DAMPING: f32 = 0.7;
 pub const BOUNCE_SPEED_TO_ROTATION: f32 = 5.;
+pub const Z_INDEX: f32 = 10.;  // Make sure the player mesh is rendered in front of all the other meshes
 // pub const BOUNCE_SPEED_TO_ROTATION: f32 = 0.01;
-pub const BOUNCE_ROTATION_TO_DIRECTION: f32 = 5.0;
+pub const BOUNCE_ROTATION_TO_DIRECTION: f32 = 5.;
 
 pub struct PlayerPlugin;
 
@@ -59,7 +60,7 @@ pub fn init_position_player(
 ) {
     let mut player = player_query.single_mut();
     if let Ok(level) = level_query.get_single() {
-        player.translation = Vec3::new(level.dimension.x, level.dimension.y, 0.) / 2.;
+        player.translation = Vec3::new(level.dimension.x, level.dimension.y, Z_INDEX) / 2.;
     }
 }
 
