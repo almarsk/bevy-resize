@@ -4,16 +4,17 @@ use super::camera;
 use super::level;
 use super::mesh_utils;
 
-pub const ACCELERATION: f32 = 50.;
 pub const SPRITE_RADIUS: f32 = 50.0;
-pub const SCALE_FACTOR: f32 = 1.1;
-pub const SPEED_DECAY: f32 = 0.99;
-pub const ROTATION_DECAY: f32 = 0.99;
-pub const BOUNCE_SPEED_DAMPING: f32 = 0.7;
-pub const BOUNCE_SPEED_TO_ROTATION: f32 = 0.01;
 pub const Z_INDEX: f32 = 10.;  // Make sure the player mesh is rendered in front of all the other meshes
-// pub const BOUNCE_SPEED_TO_ROTATION: f32 = 0.01;
-pub const BOUNCE_ROTATION_TO_DIRECTION: f32 = 5.;
+pub const ACCELERATION: f32 = 50.;
+pub const SCALE_FACTOR: f32 = 1.1;
+pub const MAX_VELOCITY: f32 = 2000.;
+pub const MAX_SPIN: f32 = 60.;
+pub const VELOCITY_DECAY: f32 = 0.99;
+pub const SPIN_DECAY: f32 = 0.99;
+pub const BOUNCE_VELOCITY_DAMPING: f32 = 0.7;
+pub const BOUNCE_VELOCITY_TO_SPIN: f32 = 0.005;
+pub const BOUNCE_SPIN_TO_DIRECTION: f32 = 50.;
 
 pub struct PlayerPlugin;
 
@@ -30,8 +31,8 @@ impl Plugin for PlayerPlugin {
 
 #[derive(Component)]
 pub struct Player {
-    speed: Vec3,
-    rotation_speed: f32,
+    velocity: Vec3,
+    spin: f32,
 }
 
 pub fn spawn_player(
@@ -47,8 +48,8 @@ pub fn spawn_player(
             1., 0.8, 0.0, 1.,
         )))),
         Player {
-            speed: Vec3::new(0., 0., 0.),
-            rotation_speed: 0.,
+            velocity: Vec3::ZERO,
+            spin: 0.,
         },
         camera::CameraFocus {},
     ));
@@ -102,29 +103,35 @@ pub fn player_acceleration(
 ) {
     if let Ok(mut player) = player_query.get_single_mut() {
         if keyboard_input.pressed(KeyCode::ArrowLeft) {
-            player.speed.x -= ACCELERATION;
+            player.velocity.x -= ACCELERATION;
         }
         if keyboard_input.pressed(KeyCode::ArrowRight) {
-            player.speed.x += ACCELERATION;
+            player.velocity.x += ACCELERATION;
         }
         if keyboard_input.pressed(KeyCode::ArrowUp) {
-            player.speed.y += ACCELERATION;
+            player.velocity.y += ACCELERATION;
         }
         if keyboard_input.pressed(KeyCode::ArrowDown) {
-            player.speed.y -= ACCELERATION;
+            player.velocity.y -= ACCELERATION;
         }
     }
 }
 
 pub fn player_movement(mut player_query: Query<(&mut Transform, &mut Player)>, time: Res<Time>) {
     if let Ok((mut transform, mut player)) = player_query.get_single_mut() {
-        let delta = player.speed * time.delta_secs() / transform.scale.y;
+        let delta = player.velocity * time.delta_secs() / transform.scale.y;
         transform.translation += delta;
-        player.speed *= SPEED_DECAY;
+        if player.velocity.length() > MAX_VELOCITY {
+            player.velocity = player.velocity.normalize() * MAX_VELOCITY;
+        }
+        player.velocity *= VELOCITY_DECAY;
 
-        let rotation_delta = player.rotation_speed * time.delta_secs() / transform.scale.y;
+        let rotation_delta = player.spin * time.delta_secs() / transform.scale.y;
         transform.rotate_z(rotation_delta);
-        player.rotation_speed *= ROTATION_DECAY;
+        if player.spin.abs() > MAX_SPIN / transform.scale.y {
+            player.spin = player.spin.signum() * MAX_SPIN / transform.scale.y;
+        }
+        player.spin *= SPIN_DECAY;
     }
 }
 
@@ -134,10 +141,10 @@ pub fn player_rotation(
 ) {
     if let Ok(mut player) = player_query.get_single_mut() {
         if keyboard_input.pressed(KeyCode::KeyA) {
-            player.rotation_speed += 0.1;
+            player.spin += 0.1;
         }
         if keyboard_input.pressed(KeyCode::KeyD) {
-            player.rotation_speed -= 0.1;
+            player.spin -= 0.1;
         }
     }
 }
@@ -179,10 +186,13 @@ pub fn confine_player_movement(
 
             // Process detected collisions, update player speed and spin
             if !collisions.is_empty() {
-                let player_speed = player.speed;
+                let player_velocity = player.velocity;
+                let player_spin = player.spin;
                 for collision in collisions {
-                    player.rotation_speed -= player_speed.cross(collision.surface_normal).z * BOUNCE_SPEED_TO_ROTATION;
-                    player.speed -= 2.0 * player_speed.dot(collision.surface_normal) * collision.surface_normal * BOUNCE_SPEED_DAMPING;
+                    player.spin -= player_velocity.cross(collision.surface_normal).z * BOUNCE_VELOCITY_TO_SPIN / player_transform.scale.y;
+                    player.velocity -= 2.0 * player_velocity.dot(collision.surface_normal) * collision.surface_normal * BOUNCE_VELOCITY_DAMPING
+                        + BOUNCE_SPIN_TO_DIRECTION * Vec3::new(player_spin * collision.surface_normal.y, -player_spin * collision.surface_normal.x, 0.);
+                    println!("{} {}", player.spin, player.velocity);
                 }
             }
 
