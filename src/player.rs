@@ -10,7 +10,7 @@ pub const SCALE_FACTOR: f32 = 1.1;
 pub const SPEED_DECAY: f32 = 0.99;
 pub const ROTATION_DECAY: f32 = 0.99;
 pub const BOUNCE_SPEED_DAMPING: f32 = 0.7;
-pub const BOUNCE_SPEED_TO_ROTATION: f32 = 5.;
+pub const BOUNCE_SPEED_TO_ROTATION: f32 = 0.01;
 pub const Z_INDEX: f32 = 10.;  // Make sure the player mesh is rendered in front of all the other meshes
 // pub const BOUNCE_SPEED_TO_ROTATION: f32 = 0.01;
 pub const BOUNCE_ROTATION_TO_DIRECTION: f32 = 5.;
@@ -179,14 +179,12 @@ pub fn confine_player_movement(
 
             // Process detected collisions, update player speed and spin
             if !collisions.is_empty() {
-                let player_direction: Vec3 = player.speed.normalize_or_zero();
-                let player_speed = player.speed.length();
+                let player_speed = player.speed;
                 for collision in collisions {
-                    player.rotation_speed -= player_direction.cross(collision.surface_normal).z * BOUNCE_SPEED_TO_ROTATION;
-                    player.speed -= 2.0 * collision.surface_normal.dot(player_direction) * collision.surface_normal * player_speed * BOUNCE_SPEED_DAMPING;
+                    player.rotation_speed -= player_speed.cross(collision.surface_normal).z * BOUNCE_SPEED_TO_ROTATION;
+                    player.speed -= 2.0 * player_speed.dot(collision.surface_normal) * collision.surface_normal * BOUNCE_SPEED_DAMPING;
                 }
             }
-
 
             player_transform.translation = translation;
         }
