@@ -4,9 +4,13 @@ use super::camera;
 use super::level;
 use super::mesh_utils;
 
-pub const PLAYER_SPEED: f32 = 500.0;
-pub const PLAYER_SIZE: f32 = 100.0;
+pub const ACCELERATION: f32 = 50.;
+pub const SPRITE_RADIUS: f32 = 50.0;
 pub const SCALE_FACTOR: f32 = 1.1;
+pub const SPEED_DECAY: f32 = 0.99;
+pub const ROTATION_DECAY: f32 = 0.99;
+pub const BOUNCE_SPEED_DAMPING: f32 = 0.7;
+pub const BOUNCE_SPEED_TO_ROTATION: f32 = 0.01;
 
 pub struct PlayerPlugin;
 
@@ -32,7 +36,7 @@ pub fn spawn_player(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
-    let mesh = mesh_utils::star_mesh(7, PLAYER_SIZE / 2., PLAYER_SIZE / 3.);
+    let mesh = mesh_utils::star_mesh(7, SPRITE_RADIUS, 0.5 * SPRITE_RADIUS);
 
     commands.spawn((
         Mesh2d(meshes.add(mesh).into()),
@@ -95,29 +99,29 @@ pub fn player_acceleration(
 ) {
     if let Ok(mut player) = player_query.get_single_mut() {
         if keyboard_input.pressed(KeyCode::ArrowLeft) {
-            player.speed += Vec3::new(-0.1, 0., 0.);
+            player.speed.x -= ACCELERATION;
         }
         if keyboard_input.pressed(KeyCode::ArrowRight) {
-            player.speed += Vec3::new(0.1, 0.0, 0.);
+            player.speed.x += ACCELERATION;
         }
         if keyboard_input.pressed(KeyCode::ArrowUp) {
-            player.speed += Vec3::new(0., 0.1, 0.);
+            player.speed.y += ACCELERATION;
         }
         if keyboard_input.pressed(KeyCode::ArrowDown) {
-            player.speed += Vec3::new(0., -0.1, 0.);
+            player.speed.y -= ACCELERATION;
         }
     }
 }
 
 pub fn player_movement(mut player_query: Query<(&mut Transform, &mut Player)>, time: Res<Time>) {
     if let Ok((mut transform, mut player)) = player_query.get_single_mut() {
-        let delta = player.speed * PLAYER_SPEED * time.delta_secs() / transform.scale.y;
+        let delta = player.speed * time.delta_secs() / transform.scale.y;
         transform.translation += delta;
-        player.speed *= Vec3::splat(0.97);
+        player.speed *= SPEED_DECAY;
 
         let rotation_delta = player.rotation_speed * time.delta_secs() / transform.scale.y;
         transform.rotate_z(rotation_delta);
-        player.rotation_speed *= 0.97;
+        player.rotation_speed *= ROTATION_DECAY;
     }
 }
 
@@ -141,27 +145,39 @@ pub fn confine_player_movement(
 ) {
     if let Ok((mut player_transform, mut player)) = player_query.get_single_mut() {
         if let Ok(level) = level_query.get_single() {
-            let half_player_size = PLAYER_SIZE * player_transform.scale.y / 2.0;
-            let x_min = 0.0 + half_player_size;
-            let x_max = level.dimension.x - half_player_size;
-            let y_min = 0.0 + half_player_size;
-            let y_max = level.dimension.y - half_player_size;
+            let scaled_player_radius = SPRITE_RADIUS * player_transform.scale.y;
+            let x_min = scaled_player_radius;
+            let x_max = level.dimension.x - scaled_player_radius;
+            let y_min = scaled_player_radius;
+            let y_max = level.dimension.y - scaled_player_radius;
 
             let mut translation = player_transform.translation;
 
             if translation.x < x_min {
-                player.speed.x *= -1.;
                 translation.x = x_min;
-            } else if translation.x > x_max {
+                let tangent = Vec3::Y;
+                player.rotation_speed += tangent.dot(player.speed) * BOUNCE_SPEED_TO_ROTATION;
                 player.speed.x *= -1.;
+                player.speed *= BOUNCE_SPEED_DAMPING;
+            } else if translation.x > x_max {
                 translation.x = x_max;
+                let tangent = -Vec3::Y;
+                player.rotation_speed += tangent.dot(player.speed) * BOUNCE_SPEED_TO_ROTATION;
+                player.speed.x *= -1.;
+                player.speed *= BOUNCE_SPEED_DAMPING;
             }
             if translation.y < y_min {
-                player.speed.y *= -1.;
                 translation.y = y_min;
-            } else if translation.y > y_max {
+                let tangent = -Vec3::X;
+                player.rotation_speed += tangent.dot(player.speed) * BOUNCE_SPEED_TO_ROTATION;
                 player.speed.y *= -1.;
+                player.speed *= BOUNCE_SPEED_DAMPING;
+            } else if translation.y > y_max {
                 translation.y = y_max;
+                let tangent = Vec3::X;
+                player.rotation_speed += tangent.dot(player.speed) * BOUNCE_SPEED_TO_ROTATION;
+                player.speed.y *= -1.;
+                player.speed *= BOUNCE_SPEED_DAMPING;
             }
 
             player_transform.translation = translation;
