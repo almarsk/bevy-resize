@@ -10,7 +10,9 @@ pub const SCALE_FACTOR: f32 = 1.1;
 pub const SPEED_DECAY: f32 = 0.99;
 pub const ROTATION_DECAY: f32 = 0.99;
 pub const BOUNCE_SPEED_DAMPING: f32 = 0.7;
-pub const BOUNCE_SPEED_TO_ROTATION: f32 = 0.01;
+pub const BOUNCE_SPEED_TO_ROTATION: f32 = 5.;
+// pub const BOUNCE_SPEED_TO_ROTATION: f32 = 0.01;
+pub const BOUNCE_ROTATION_TO_DIRECTION: f32 = 5.0;
 
 pub struct PlayerPlugin;
 
@@ -152,32 +154,31 @@ pub fn confine_player_movement(
             let y_max = level.dimension.y - scaled_player_radius;
 
             let mut translation = player_transform.translation;
+            let player_direction = player.speed.normalize_or_zero();
+            let player_speed = player.speed.length();
 
             if translation.x < x_min {
                 translation.x = x_min;
-                let tangent = Vec3::Y;
-                player.rotation_speed += tangent.dot(player.speed) * BOUNCE_SPEED_TO_ROTATION;
-                player.speed.x *= -1.;
-                player.speed *= BOUNCE_SPEED_DAMPING;
+                let surface_normal = Vec3::X;
+                println!("{}", surface_normal.cross(player_direction));
+                player.rotation_speed -= player_direction.cross(surface_normal).z * BOUNCE_SPEED_TO_ROTATION;
+                player.speed -= 2.0 * surface_normal.dot(player_direction) * surface_normal * player_speed * BOUNCE_SPEED_DAMPING;
             } else if translation.x > x_max {
                 translation.x = x_max;
-                let tangent = -Vec3::Y;
-                player.rotation_speed += tangent.dot(player.speed) * BOUNCE_SPEED_TO_ROTATION;
-                player.speed.x *= -1.;
-                player.speed *= BOUNCE_SPEED_DAMPING;
+                let surface_normal = -Vec3::X;
+                player.rotation_speed -= player_direction.cross(surface_normal).z * BOUNCE_SPEED_TO_ROTATION;
+                player.speed -= 2.0 * surface_normal.dot(player_direction) * surface_normal * player_speed * BOUNCE_SPEED_DAMPING;
             }
             if translation.y < y_min {
                 translation.y = y_min;
-                let tangent = -Vec3::X;
-                player.rotation_speed += tangent.dot(player.speed) * BOUNCE_SPEED_TO_ROTATION;
-                player.speed.y *= -1.;
-                player.speed *= BOUNCE_SPEED_DAMPING;
+                let surface_normal = Vec3::Y;
+                player.rotation_speed -= player_direction.cross(surface_normal).z * BOUNCE_SPEED_TO_ROTATION;
+                player.speed -= 2.0 * surface_normal.dot(player_direction) * surface_normal * player_speed * BOUNCE_SPEED_DAMPING;
             } else if translation.y > y_max {
                 translation.y = y_max;
-                let tangent = Vec3::X;
-                player.rotation_speed += tangent.dot(player.speed) * BOUNCE_SPEED_TO_ROTATION;
-                player.speed.y *= -1.;
-                player.speed *= BOUNCE_SPEED_DAMPING;
+                let surface_normal = -Vec3::Y;
+                player.rotation_speed -= player_direction.cross(surface_normal).z * BOUNCE_SPEED_TO_ROTATION;
+                player.speed -= 2.0 * surface_normal.dot(player_direction) * surface_normal * player_speed * BOUNCE_SPEED_DAMPING;
             }
 
             player_transform.translation = translation;
