@@ -142,6 +142,10 @@ pub fn player_rotation(
     }
 }
 
+pub struct Collision {
+    surface_normal: Vec3
+}
+
 pub fn confine_player_movement(
     mut player_query: Query<(&mut Transform, &mut Player)>,
     level_query: Query<&level::Level>,
@@ -155,32 +159,34 @@ pub fn confine_player_movement(
             let y_max = level.dimension.y - scaled_player_radius;
 
             let mut translation = player_transform.translation;
-            let player_direction = player.speed.normalize_or_zero();
-            let player_speed = player.speed.length();
+            let mut collisions: Vec<Collision> = Vec::new();
 
+            // Detect collisions and move the player out of the collision
             if translation.x < x_min {
                 translation.x = x_min;
-                let surface_normal = Vec3::X;
-                println!("{}", surface_normal.cross(player_direction));
-                player.rotation_speed -= player_direction.cross(surface_normal).z * BOUNCE_SPEED_TO_ROTATION;
-                player.speed -= 2.0 * surface_normal.dot(player_direction) * surface_normal * player_speed * BOUNCE_SPEED_DAMPING;
+                collisions.push(Collision{surface_normal: Vec3::X});
             } else if translation.x > x_max {
                 translation.x = x_max;
-                let surface_normal = -Vec3::X;
-                player.rotation_speed -= player_direction.cross(surface_normal).z * BOUNCE_SPEED_TO_ROTATION;
-                player.speed -= 2.0 * surface_normal.dot(player_direction) * surface_normal * player_speed * BOUNCE_SPEED_DAMPING;
+                collisions.push(Collision{surface_normal: -Vec3::X});
             }
             if translation.y < y_min {
                 translation.y = y_min;
-                let surface_normal = Vec3::Y;
-                player.rotation_speed -= player_direction.cross(surface_normal).z * BOUNCE_SPEED_TO_ROTATION;
-                player.speed -= 2.0 * surface_normal.dot(player_direction) * surface_normal * player_speed * BOUNCE_SPEED_DAMPING;
+                collisions.push(Collision{surface_normal: Vec3::Y});
             } else if translation.y > y_max {
                 translation.y = y_max;
-                let surface_normal = -Vec3::Y;
-                player.rotation_speed -= player_direction.cross(surface_normal).z * BOUNCE_SPEED_TO_ROTATION;
-                player.speed -= 2.0 * surface_normal.dot(player_direction) * surface_normal * player_speed * BOUNCE_SPEED_DAMPING;
+                collisions.push(Collision{surface_normal: -Vec3::Y});
             }
+
+            // Process detected collisions, update player speed and spin
+            if !collisions.is_empty() {
+                let player_direction: Vec3 = player.speed.normalize_or_zero();
+                let player_speed = player.speed.length();
+                for collision in collisions {
+                    player.rotation_speed -= player_direction.cross(collision.surface_normal).z * BOUNCE_SPEED_TO_ROTATION;
+                    player.speed -= 2.0 * collision.surface_normal.dot(player_direction) * collision.surface_normal * player_speed * BOUNCE_SPEED_DAMPING;
+                }
+            }
+
 
             player_transform.translation = translation;
         }
