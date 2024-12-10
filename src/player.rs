@@ -36,7 +36,7 @@ pub fn spawn_player(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
-    let mesh = mesh_utils::star_mesh(7, SPRITE_RADIUS, 0.5 * SPRITE_RADIUS);
+    let mesh = mesh_utils::star_mesh(9, SPRITE_RADIUS, 0.66 * SPRITE_RADIUS);
 
     commands.spawn((
         Mesh2d(meshes.add(mesh).into()),
