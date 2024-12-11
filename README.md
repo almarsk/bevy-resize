@@ -1,23 +1,15 @@
 bevy toy project
 
-todo
-R:
-obstakly / level design
-    kolize
-	svg editor
-	2d tvary v blenderu ?
-	nastřelený místnosti + tvary -> bevy zamíchá a vyrendruje
+todo\
+DONE angled collisions -> spin
+DONE collisions with rotation -> angled bounce
 
-kolize pod úhlem -> spin
-
-A:
-game mode
-	v prototypu
-	bouchač
-	projektily radiálně
-	projektily směrově ? v sobotu probrat
-
-enemies -
-	random spawn
-	agenda ?
-	kolize -> game over -> ui
+obstacles / level design\
+    collisions\
+    vector 2d shapes\
+    generating maps\
+enemies -\
+	random spawn\
+	agenda ?\
+	three lives\
+	collision -> game over -> basic ui\
