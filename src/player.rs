@@ -5,7 +5,7 @@ use super::level;
 use super::mesh_utils;
 
 pub const SPRITE_RADIUS: f32 = 50.0;
-pub const Z_INDEX: f32 = 10.;  // Make sure the player mesh is rendered in front of all the other meshes
+pub const Z_INDEX: f32 = 10.; // Make sure the player mesh is rendered in front of all the other meshes
 pub const ACCELERATION: f32 = 50.;
 pub const SCALE_FACTOR: f32 = 1.1;
 pub const MAX_VELOCITY: f32 = 2000.;
@@ -150,7 +150,7 @@ pub fn player_rotation(
 }
 
 pub struct Collision {
-    surface_normal: Vec3
+    surface_normal: Vec3,
 }
 
 pub fn confine_player_movement(
@@ -171,27 +171,35 @@ pub fn confine_player_movement(
             // Detect collisions and move the player out of the collision
             if translation.x < x_min {
                 translation.x = x_min;
-                collisions.push(Collision{surface_normal: Vec3::X});
+                collisions.push(Collision {
+                    surface_normal: Vec3::X,
+                });
             } else if translation.x > x_max {
                 translation.x = x_max;
-                collisions.push(Collision{surface_normal: -Vec3::X});
+                collisions.push(Collision {
+                    surface_normal: -Vec3::X,
+                });
             }
             if translation.y < y_min {
                 translation.y = y_min;
-                collisions.push(Collision{surface_normal: Vec3::Y});
+                collisions.push(Collision {
+                    surface_normal: Vec3::Y,
+                });
             } else if translation.y > y_max {
                 translation.y = y_max;
-                collisions.push(Collision{surface_normal: -Vec3::Y});
+                collisions.push(Collision {
+                    surface_normal: -Vec3::Y,
+                });
             }
 
             // Process detected collisions, update player speed and spin
             if !collisions.is_empty() {
                 let player_velocity = player.velocity;
                 let player_spin = player.spin;
+                #[rustfmt::skip]
                 for collision in collisions {
                     player.spin -= player_velocity.cross(collision.surface_normal).z * BOUNCE_VELOCITY_TO_SPIN / player_transform.scale.y;
-                    player.velocity -= 2.0 * player_velocity.dot(collision.surface_normal) * collision.surface_normal * BOUNCE_VELOCITY_DAMPING
-                        + BOUNCE_SPIN_TO_DIRECTION * Vec3::new(player_spin * collision.surface_normal.y, -player_spin * collision.surface_normal.x, 0.);
+                    player.velocity -= 2.0 * player_velocity.dot(collision.surface_normal) * collision.surface_normal * BOUNCE_VELOCITY_DAMPING + BOUNCE_SPIN_TO_DIRECTION * Vec3::new(player_spin * collision.surface_normal.y, -player_spin * collision.surface_normal.x, 0.);
                 }
             }
 
