@@ -1,11 +1,10 @@
 mod camera;
 mod level;
-mod player;
 mod mesh_utils;
+mod player;
 mod ui;
 
 use bevy::prelude::*;
-
 
 fn main() {
     App::new()

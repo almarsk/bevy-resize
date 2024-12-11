@@ -28,7 +28,7 @@ pub fn spawn_level(
     let mesh = mesh_utils::rectangle_outline(LEVEL_DIM.x, LEVEL_DIM.y);
 
     commands.spawn((
-        Mesh2d(meshes.add(mesh).into()),
+        Mesh2d(meshes.add(mesh)),
         MeshMaterial2d(materials.add(ColorMaterial::from_color(Color::linear_rgba(
             1., 0.8, 0.0, 1.,
         )))),
@@ -43,15 +43,11 @@ pub fn spawn_level(
 
     // Beautiful background
     commands.spawn((
-        Mesh2d(
-            meshes
-                .add(mesh_utils::random_lines(
-                    100,
-                    Vec3::splat(0.),
-                    Vec3::new(LEVEL_DIM.x, LEVEL_DIM.y, 0.),
-                ))
-                .into(),
-        ),
+        Mesh2d(meshes.add(mesh_utils::random_lines(
+            100,
+            Vec3::splat(0.),
+            Vec3::new(LEVEL_DIM.x, LEVEL_DIM.y, 0.),
+        ))),
         MeshMaterial2d(materials.add(ColorMaterial::from_color(Color::linear_rgba(
             0., 0.3, 0.5, 1.,
         )))),
@@ -74,7 +70,7 @@ pub fn spawn_obstacles(
     for pos in positions {
         let mesh = mesh_utils::triangle_mesh(1.);
         commands.spawn((
-            Mesh2d(meshes.add(mesh).into()),
+            Mesh2d(meshes.add(mesh)),
             MeshMaterial2d(materials.add(ColorMaterial::from_color(Color::linear_rgba(
                 0., 0.8, 0.4, 1.,
             )))),
