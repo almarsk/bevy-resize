@@ -2,6 +2,8 @@ use super::camera;
 use super::mesh_utils;
 
 use bevy::prelude::*;
+use bevy::render::mesh;
+use bevy::render::render_asset;
 
 pub const LEVEL_DIM: Vec2 = Vec2::new(1920., 1080.);
 
@@ -11,7 +13,9 @@ pub struct Level {
 }
 
 #[derive(Component)]
-pub struct Obstacle {}
+pub struct Obstacle {
+    pub vertices: [Vec3; 3],
+}
 
 pub struct LevelPlugin;
 impl Plugin for LevelPlugin {
@@ -72,7 +76,12 @@ pub fn spawn_obstacles(
     ];
 
     for pos in positions {
-        let mesh = mesh_utils::triangle_mesh(1.);
+        let vertex_positions = mesh_utils::triangle_vertex_positions(1.);
+        let mesh = Mesh::new(
+            mesh::PrimitiveTopology::TriangleList,
+            render_asset::RenderAssetUsages::default(),
+        )
+        .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, vertex_positions.to_vec());
         commands.spawn((
             Mesh2d(meshes.add(mesh).into()),
             MeshMaterial2d(materials.add(ColorMaterial::from_color(Color::linear_rgba(
@@ -80,7 +89,9 @@ pub fn spawn_obstacles(
             )))),
             Transform::from_translation(Vec3::new(LEVEL_DIM.x, LEVEL_DIM.y, 0.) * pos)
                 .with_scale(Vec3::new(100., 100., 0.)),
-            Obstacle {},
+            Obstacle {
+                vertices: vertex_positions,
+            },
         ));
     }
 }
