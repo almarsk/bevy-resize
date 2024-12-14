@@ -196,28 +196,15 @@ pub fn confine_player_movement(
             if !collisions.is_empty() {
                 let player_velocity = player.velocity;
                 let player_spin = player.spin;
+                #[rustfmt::skip]
                 for collision in collisions {
-                    player.spin -= player_velocity.cross(collision.surface_normal).z
-                        * BOUNCE_VELOCITY_TO_SPIN
-                        / player_transform.scale.y;
-                    player.velocity -=
-                        impact_reaction_vector(player_velocity, collision, player_spin);
+                    player.spin -= player_velocity.cross(collision.surface_normal).z * BOUNCE_VELOCITY_TO_SPIN / player_transform.scale.y;
+                    player.velocity -= 2.0 * player_velocity.dot(collision.surface_normal) * collision.surface_normal * BOUNCE_VELOCITY_DAMPING
+                        + BOUNCE_SPIN_TO_DIRECTION * Vec3::new(player_spin * collision.surface_normal.y, -player_spin * collision.surface_normal.x, 0.);
                 }
             }
 
             player_transform.translation = translation;
         }
     }
-}
-
-fn impact_reaction_vector(player_velocity: Vec3, collision: Collision, player_spin: f32) -> Vec3 {
-    2.0 * player_velocity.dot(collision.surface_normal)
-        * collision.surface_normal
-        * BOUNCE_VELOCITY_DAMPING
-        + BOUNCE_SPIN_TO_DIRECTION
-            * Vec3::new(
-                player_spin * collision.surface_normal.y,
-                -player_spin * collision.surface_normal.x,
-                0.,
-            )
 }

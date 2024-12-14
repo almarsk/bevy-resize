@@ -1,3 +1,5 @@
+#![feature(stmt_expr_attributes)]
+
 mod camera;
 mod level;
 mod mesh_utils;
