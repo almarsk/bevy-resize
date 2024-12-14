@@ -27,7 +27,7 @@ pub struct CameraBounds {
 }
 
 pub fn spawn_camera(mut commands: Commands) {
-    commands.spawn((Camera2d::default(),));
+    commands.spawn(Camera2d);
 }
 
 pub fn camera_follow_focus(
